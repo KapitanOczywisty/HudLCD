@@ -21,7 +21,7 @@ namespace KapitanOczywisty.HudLcd
   [MyEntityComponentDescriptor(typeof(MyObjectBuilder_TextPanel), false)]
   sealed class HudLcd : MyGameLogicComponent
   {
-    const long WORKSHOP_ID = 0;
+    const long WORKSHOP_ID = 1999560983;
     const string MOD = "HudLcd";
 
     //Static
