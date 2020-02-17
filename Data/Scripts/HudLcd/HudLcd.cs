@@ -254,7 +254,7 @@ namespace KapitanOczywisty.HudLcd
                 }
                 else
                 {
-                  thistextBackgroundColor = thistextBackgroundColor * 0.1f;
+                  thistextBackgroundColor = thistextBackgroundColor * 0.5f;
                 }
               }
             }
