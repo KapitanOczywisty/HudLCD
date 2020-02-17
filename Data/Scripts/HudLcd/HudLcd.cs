@@ -65,6 +65,10 @@ namespace KapitanOczywisty.HudLcd
     bool isControlled => ControlledEntity != null && ControlledEntity.CubeGrid == thisLcd.CubeGrid;
     bool hasHudLcd = false;
 
+    const string stringNil = "\0";
+    bool dataDirty = true;
+    string titleCache = "";
+    string textCache = stringNil;
 
     // Initializes textAPI once for clients, checks if is Server
     static void Initialize()
@@ -83,6 +87,7 @@ namespace KapitanOczywisty.HudLcd
     {
       base.Init(objectBuilder);
       thisLcd = Entity as IMyTextPanel;
+      thisLcd.CustomDataChanged += (x) => { dataDirty = true; };
       NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
     }
 
@@ -97,10 +102,20 @@ namespace KapitanOczywisty.HudLcd
     {
       if (isServer) return;
       if (!IsAPIAlive) return;
-      UpdateValues();
+      if (thisLcd.GetPublicTitle() != titleCache)
+      {
+        dataDirty = true;
+        titleCache = thisLcd.GetPublicTitle();
+      }
+      // only check if something has changed
+      if (dataDirty)
+      {
+        UpdateValues();
+      }
       if (isControlled && hasHudLcd)
       {
-        UpdateLCD();
+        if (textCache != thisLcd.GetText())
+          UpdateLCD();
       }
       else
       {
@@ -122,7 +137,7 @@ namespace KapitanOczywisty.HudLcd
         Message.TimeToLive = 0;
         Message = null;
       }
-
+      textCache = stringNil;
     }
 
     private void UpdateValues()
@@ -262,6 +277,7 @@ namespace KapitanOczywisty.HudLcd
 
       }
 
+      textCache = stringNil;
     }
 
     private double TryGetDouble(string v, double defaultval)
@@ -306,9 +322,10 @@ namespace KapitanOczywisty.HudLcd
       {
         Message = new HudAPIv2.HUDMessage(m_msg, thistextPosition, Scale: thistextScale, Blend: BlendTypeEnum.PostPP, Font: thistextFont);
       }
+      textCache = thisLcd.GetText();
       m_msg.Clear();
       m_msg.Append(thisconfigcolour);
-      m_msg.Append(thisLcd.GetText());
+      m_msg.Append(textCache);
       Background.Visible = thistextBackground;
       if (thistextBackground)
       {
