@@ -6,7 +6,9 @@ using Sandbox.ModAPI;
 using Sandbox.ModAPI.Interfaces;
 using VRage.ObjectBuilders;
 using VRage.ModAPI;
+using VRage.Utils;
 using VRageMath;
+using System.Text.RegularExpressions;
 
 using Draygo.API;
 using BlendTypeEnum = VRageRender.MyBillboard.BlendTypeEnum;
@@ -15,6 +17,8 @@ using BlendTypeEnum = VRageRender.MyBillboard.BlendTypeEnum;
 // Original mod by: Jawastew
 // https://steamcommunity.com/sharedfiles/filedetails/?id=911144486
 //
+
+using KapitanOczywisty;
 
 namespace KapitanOczywisty.HudLcd
 {
@@ -34,19 +38,28 @@ namespace KapitanOczywisty.HudLcd
     //config
     const int ttl = 10;
     const string matchstring = "hudlcd";
-    const char delim = ':';
+    readonly char[] delim = new char[1] { ':' };
     const double textPosX = -0.98;
     const double textPosY = -0.2;
     const double textScale = 0.8;
+    const string textFont = "white";
+    const string textFontMonospace = "monospace";
+    const bool textBackground = false;
+    readonly Color textBackgroundColor = new Color(0f, 0f, 0f, 0.5f);
+
+    readonly Regex regexBackground = new Regex(@"background=(?:([a-z]+)|(\d{1,3},\d{1,3},\d{1,3}))(?:,(\d+))?", RegexOptions.IgnoreCase);
 
     // Textpanel
     IMyTextPanel thisLcd = null;
     StringBuilder m_msg;
-    HudAPIv2.HUDMessage msg;
+    HudAPIv2.HUDMessage Message;
     HudAPIv2.BillBoardHUDMessage Background;
-    Vector2D thistextPosition = new Vector2D(-0.98, -0.2);
-    double thistextScale = 0.8;
-    string thisconfigcolour = Color.White.ToString();
+    Vector2D thistextPosition = new Vector2D(textPosX, textPosY);
+    double thistextScale = textScale;
+    string thisconfigcolour = string.Empty;
+    string thistextFont = textFont;
+    bool thistextBackground = textBackground;
+    Color thistextBackgroundColor;
 
     IMyTerminalBlock ControlledEntity => MyAPIGateway.Session.LocalHumanPlayer.Controller.ControlledEntity as IMyTerminalBlock;
     bool isControlled => ControlledEntity != null && ControlledEntity.CubeGrid == thisLcd.CubeGrid;
@@ -89,12 +102,27 @@ namespace KapitanOczywisty.HudLcd
       {
         UpdateLCD();
       }
-      else if (msg != null)
+      else
+      {
+        if (Message != null)
+          CleanupHUD();
+      }
+    }
+
+    private void CleanupHUD()
+    {
+      if (Background != null)
+      {
+        Background.TimeToLive = 0;
+        Background = null;
+      }
+      if (Message != null)
       {
         m_msg.Clear();
-        msg.TimeToLive = 0;
-        msg = null;
+        Message.TimeToLive = 0;
+        Message = null;
       }
+
     }
 
     private void UpdateValues()
@@ -110,11 +138,10 @@ namespace KapitanOczywisty.HudLcd
         hasHudLcd = true;
         ParseAndUpdateConfig(thisLcd.CustomData);
       }
-      else if (msg != null)
+      else
       {
-        m_msg.Clear();
-        msg.TimeToLive = 0;
-        msg = null;
+        if (Message != null)
+          CleanupHUD();
       }
     }
 
@@ -125,23 +152,24 @@ namespace KapitanOczywisty.HudLcd
       {
         if (line.ToLower().Contains(matchstring))
         {
-          String[] rawconf = line.Split(delim);
-          for (int i = 0; i < 5; i++)
+          int maxParams = 5;
+          String[] rawconf = line.Split(delim, maxParams + 1);
+          for (int i = 0; i < maxParams; i++)
           {
-            if (rawconf.Length > i) // Set values from Config Line
+            if (rawconf.Length > i && rawconf[i].Length > 0) // Set values from Config Line
             {
               switch (i)
               {
                 case 0:
                   break;
                 case 1:
-                  thistextPosition.X = trygetdouble(rawconf[i], textPosX);
+                  thistextPosition.X = TryGetDouble(rawconf[i], textPosX);
                   break;
                 case 2:
-                  thistextPosition.Y = trygetdouble(rawconf[i], textPosY);
+                  thistextPosition.Y = TryGetDouble(rawconf[i], textPosY);
                   break;
                 case 3:
-                  thistextScale = trygetdouble(rawconf[i], textScale);
+                  thistextScale = TryGetDouble(rawconf[i], textScale);
                   break;
                 case 4:
                   thisconfigcolour = "<color=" + rawconf[i].Trim() + ">";
@@ -175,10 +203,59 @@ namespace KapitanOczywisty.HudLcd
             }
 
           }
-          if (msg != null)
+
+          // defaults
+          thistextFont = textFont;
+          thistextBackground = false;
+          thistextBackgroundColor = textBackgroundColor;
+          if (rawconf.Length > maxParams)
+          { // new parameters
+            string extra = rawconf[maxParams].ToLower();
+            if (extra.Contains("monospace"))
+            {
+              thistextFont = textFontMonospace;
+            }
+            if (extra.Contains("background"))
+            {
+              thistextBackground = true;
+
+              // look for custom color
+              var match = regexBackground.Match(extra);
+              if (match.Success)
+              {
+                if (match.Groups[1].Length > 0)
+                {
+                  thistextBackgroundColor = Colors.GetColor(match.Groups[1].Value);
+                }
+                else if (match.Groups[2].Length > 0)
+                {
+                  var cp = match.Groups[2].Value.Split(',');
+                  thistextBackgroundColor = new Color(TryGetInt(cp[0], 0), TryGetInt(cp[1], 0), TryGetInt(cp[2], 0));
+                }
+
+                if (match.Groups[3].Length > 0)
+                {
+                  thistextBackgroundColor = thistextBackgroundColor * (TryGetInt(match.Groups[3].Value, 127) / 255f);
+                }
+                else
+                {
+                  thistextBackgroundColor = thistextBackgroundColor * 0.1f;
+                }
+              }
+            }
+          }
+
+          if (Message != null)
           {
-            msg.Origin = thistextPosition;
-            msg.Scale = thistextScale;
+            Message.Origin = thistextPosition;
+            Message.Scale = thistextScale;
+            Message.Font = thistextFont;
+          }
+          if (Background != null)
+          {
+            Background.Origin = thistextPosition;
+            Background.Visible = thistextBackground;
+            Background.BillBoardColor = thistextBackgroundColor;
           }
           break;
         }
@@ -187,11 +264,23 @@ namespace KapitanOczywisty.HudLcd
 
     }
 
-    private double trygetdouble(string v, double defaultval)
+    private double TryGetDouble(string v, double defaultval)
     {
       try
       {
         return double.Parse(v);
+      }
+      catch (Exception)
+      {
+        return defaultval;
+      }
+    }
+
+    private int TryGetInt(string v, int defaultval)
+    {
+      try
+      {
+        return int.Parse(v);
       }
       catch (Exception)
       {
@@ -205,17 +294,34 @@ namespace KapitanOczywisty.HudLcd
       {
         m_msg = new StringBuilder();
       }
-      if (msg == null)
+      if (Background == null)
       {
-        msg = new HudAPIv2.HUDMessage(m_msg, thistextPosition, null, -1, thistextScale, true, false, Color.Black, BlendTypeEnum.PostPP);
+        Background = new HudAPIv2.BillBoardHUDMessage(MyStringId.GetOrCompute("SquareIgnoreDepth"),
+                                                      thistextPosition,
+                                                      thistextBackgroundColor,
+                                                      Scale: 1.05, // .05 is for padding
+                                                      Blend: BlendTypeEnum.PostPP);
+      }
+      if (Message == null)
+      {
+        Message = new HudAPIv2.HUDMessage(m_msg, thistextPosition, Scale: thistextScale, Blend: BlendTypeEnum.PostPP, Font: thistextFont);
       }
       m_msg.Clear();
       m_msg.Append(thisconfigcolour);
       m_msg.Append(thisLcd.GetText());
+      Background.Visible = thistextBackground;
+      if (thistextBackground)
+      {
+        var ln = Message.GetTextLength();
+        Background.Offset = ln / 2d;
+        Background.Width = (float)ln.X;
+        Background.Height = (float)ln.Y;
+      }
     }
 
-    //public override void Close ()
-    //{
-    //}
+    public override void Close()
+    {
+      CleanupHUD();
+    }
   }
 }
