@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using VRage.Game;
 using VRage.Game.Components;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.ModAPI;
@@ -46,8 +47,19 @@ namespace KapitanOczywisty.HudLcd
     const string textFontMonospace = "monospace";
     const bool textBackground = false;
     readonly Color textBackgroundColor = new Color(0f, 0f, 0f, 0.5f);
+    const int textRange = 100;
+
+    enum stateCondition
+    {
+      Any = 0,
+      Camera = 1,
+      First = 2,
+      Third = 3,
+      Range = 4,
+    }
 
     readonly Regex regexBackground = new Regex(@"background=(?:([a-z]+)|(\d{1,3},\d{1,3},\d{1,3}))(?:,(\d+))?", RegexOptions.IgnoreCase);
+    readonly Regex regexRange = new Regex(@"range=(\d+)", RegexOptions.IgnoreCase);
 
     // Textpanel
     IMyTextPanel thisLcd = null;
@@ -60,10 +72,26 @@ namespace KapitanOczywisty.HudLcd
     string thistextFont = textFont;
     bool thistextBackground = textBackground;
     Color thistextBackgroundColor;
+    int thistextRange = textRange;
 
     IMyTerminalBlock ControlledEntity => MyAPIGateway.Session.LocalHumanPlayer.Controller.ControlledEntity as IMyTerminalBlock;
+    float PlayerDistance => Vector3.Distance(thisLcd.GetPosition(), MyAPIGateway.Session.Player.GetPosition());
+    bool isInFirstPersonView => MyAPIGateway.Session.CameraController.IsInFirstPersonView;
+    bool isInCamera => MyAPIGateway.Session.CameraController.Entity is IMyCameraBlock || MyAPIGateway.Session.CameraController.Entity is IMyUserControllableGun;
+    bool isInValidRange()
+    {
+      if (thisLcd.OwnerId == 0L) return false;
+      if (thisLcd.OwnerId == MyAPIGateway.Session.Player.IdentityId)
+      {
+        return PlayerDistance < thistextRange;
+      }
+      return false;
+      // for now only owner can see
+      // return thisLcd.GetPlayerRelationToOwner() == MyRelationsBetweenPlayerAndBlock.FactionShare && PlayerDistance < thistextRange;
+    }
     bool isControlled => ControlledEntity != null && ControlledEntity.CubeGrid == thisLcd.CubeGrid;
     bool hasHudLcd = false;
+    stateCondition requiredState = stateCondition.Any;
 
     const string stringNil = "\0";
     bool dataDirty = true;
@@ -102,6 +130,7 @@ namespace KapitanOczywisty.HudLcd
     {
       if (isServer) return;
       if (!IsAPIAlive) return;
+
       if (thisLcd.GetPublicTitle() != titleCache)
       {
         dataDirty = true;
@@ -112,7 +141,27 @@ namespace KapitanOczywisty.HudLcd
       {
         UpdateValues();
       }
-      if (isControlled && hasHudLcd)
+
+      bool showHud = false;
+      if (hasHudLcd)
+      {
+        if (requiredState == stateCondition.Range && ControlledEntity == null && isInValidRange())
+        {
+          showHud = true;
+        }
+        else if (isControlled)
+        {
+          if (requiredState == stateCondition.Any
+            || (requiredState == stateCondition.Camera && isInCamera)
+            || (requiredState == stateCondition.First && isInFirstPersonView)
+            || (requiredState == stateCondition.Third && !isInFirstPersonView))
+          {
+            showHud = true;
+          }
+        }
+      }
+
+      if (showHud)
       {
         if (textCache != thisLcd.GetText())
           UpdateLCD();
@@ -223,6 +272,7 @@ namespace KapitanOczywisty.HudLcd
           thistextFont = textFont;
           thistextBackground = false;
           thistextBackgroundColor = textBackgroundColor;
+          requiredState = stateCondition.Any;
           if (rawconf.Length > maxParams)
           { // new parameters
             string extra = rawconf[maxParams].ToLower();
@@ -257,6 +307,31 @@ namespace KapitanOczywisty.HudLcd
                   thistextBackgroundColor = thistextBackgroundColor * 0.5f;
                 }
               }
+            }
+            if (extra.Contains("range"))
+            {
+              requiredState = stateCondition.Range;
+              var match = regexRange.Match(extra);
+              if (match.Success && match.Groups[1].Length > 0)
+              {
+                thistextRange = MathHelper.Clamp(TryGetInt(match.Groups[1].Value, 200), 1, 5000);
+              }
+              else
+              {
+                thistextRange = textRange;
+              }
+            }
+            else if (extra.Contains("first"))
+            {
+              requiredState = stateCondition.First;
+            }
+            else if (extra.Contains("third"))
+            {
+              requiredState = stateCondition.Third;
+            }
+            else if (extra.Contains("camera"))
+            {
+              requiredState = stateCondition.Camera;
             }
           }
 
