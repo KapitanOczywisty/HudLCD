@@ -365,7 +365,7 @@ namespace KapitanOczywisty.HudLcd
       match = regexPos.Match(config);
       SetPosition(
         match.Success ? Utils.TryGetDouble(match.Groups[1].Value, defaultPosX) : defaultPosX,
-        match.Success ? Utils.TryGetDouble(match.Groups[1].Value, defaultPosX) : defaultPosY
+        match.Success ? Utils.TryGetDouble(match.Groups[2].Value, defaultPosY) : defaultPosY
       );
       match = regexScale.Match(config);
       SetScale(
