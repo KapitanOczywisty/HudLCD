@@ -35,12 +35,14 @@ namespace KapitanOczywisty.HudLcd
     List<int> FoundHudSurfaces;
 
     const string HudKeyword = "hudlcd";
+    // do not allow space "hudlcd 1" with space -  [\t ]*
+    // ungreedy modifier only with RightToLeft!
     static readonly Regex regexInstance = new Regex(@"(?xi)
       # keyword and display
-      " + HudKeyword + @" [\t ]* (\d+)?
+      " + HudKeyword + @" (\d+ (?![*.]) )?
       # configuration
-      ([\S\t ]*)", RegexOptions.Compiled | RegexOptions.RightToLeft);
-    static readonly Regex regexNoNewLine = new Regex(@"\\\r\n|\\\n|\\\r", RegexOptions.Compiled | RegexOptions.RightToLeft);
+      ([\S\t ]*?)", RegexOptions.Compiled | RegexOptions.RightToLeft);
+    static readonly Regex regexNoNewLine = new Regex(@"\\\r\n|\\\n|\\\r", RegexOptions.Compiled);
 
     public override void Init(MyObjectBuilder_EntityBase objectBuilder)
     {
