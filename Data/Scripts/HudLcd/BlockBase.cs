@@ -62,8 +62,6 @@ namespace KapitanOczywisty.HudLcd
       block.CustomNameChanged += MakeDataDirty;
       NeedsUpdate |= MyEntityUpdateEnum.EACH_10TH_FRAME;
       NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
-
-      Utils.LogWarning($"Object init cn {block.CustomName} n {block.Name} sc {SurfaceCount}");
     }
 
     protected void MakeDataDirty(IMyTerminalBlock _)
