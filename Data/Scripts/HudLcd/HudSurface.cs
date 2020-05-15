@@ -354,7 +354,7 @@ namespace KapitanOczywisty.HudLcd
       regexScale = new Regex(@"(?xi)  @ ( [\d.+-]+ ) ", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexColor = new Regex(@"(?xi)  \# ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} )", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexBackground = new Regex(@"(?xi) (?: background | \bbg\b ) (?: = ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} ) (?: ,(\d{1,3}) )? )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
-      regexRange = new Regex(@"(?xi) (?: range ) (?: = ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} ) )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
+      regexRange = new Regex(@"(?xi) (?: range ) (?: = ( \d+ ) )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
       // someday we may support !first etc.
       regexRestriction = new Regex(@"(?xi) ( first | third | camera )", RegexOptions.Compiled);
     }
