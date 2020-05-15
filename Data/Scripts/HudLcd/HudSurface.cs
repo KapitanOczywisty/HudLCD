@@ -11,6 +11,7 @@ using VRage.ModAPI;
 using VRage.Utils;
 using VRageMath;
 using System.Text.RegularExpressions;
+using IMyFaction = VRage.Game.ModAPI.IMyFaction;
 
 using Draygo.API;
 using BlendTypeEnum = VRageRender.MyBillboard.BlendTypeEnum;
@@ -146,7 +147,7 @@ namespace KapitanOczywisty.HudLcd
 
           if (RangeType == RangeTypeEnum.Faction)
           {
-            if (block.OwnerId != null && MyAPIGateway.Session.Player.IdentityId != null)
+            if (block.OwnerId != 0L && MyAPIGateway.Session.Player.IdentityId != 0L)
             {
               IMyFaction myFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.OwnerId);
               IMyFaction myFaction2 = MyAPIGateway.Session.Factions.TryGetPlayerFaction(MyAPIGateway.Session.Player.IdentityId);
