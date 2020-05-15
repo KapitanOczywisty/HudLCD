@@ -174,15 +174,16 @@ namespace KapitanOczywisty.HudLcd
       {
         showHud = true;
       }
-      else if (!HasRange && IsSameGrid)
+      else if (IsSameGrid && Restrictions != RestrictionEnum.None)
       {
-        if (Restrictions == RestrictionEnum.Any
-          || (Restrictions == RestrictionEnum.Camera && IsInCamera)
-          || (Restrictions == RestrictionEnum.First && IsInFirstPersonView)
-          || (Restrictions == RestrictionEnum.Third && !IsInFirstPersonView))
-        {
+        if (Restrictions == RestrictionEnum.Any)
           showHud = true;
-        }
+        else if (IsInCamera)
+          showHud = Restrictions.HasFlag(RestrictionEnum.Camera);
+        else if (IsInFirstPersonView)
+          showHud = Restrictions.HasFlag(RestrictionEnum.First);
+        else
+          showHud = Restrictions.HasFlag(RestrictionEnum.Third);
       }
 
       if (showHud)
@@ -387,7 +388,7 @@ namespace KapitanOczywisty.HudLcd
       regexBackground = new Regex(@"(?xi) (?: background | \bbg\b ) (?: = ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} ) (?: ,(\d{1,3}) )? )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexRange = new Regex(@"(?xi) (?: range (all | faction | ) (?! \w ) ) (?: = ( \d+ ) )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
       // someday we may support !first etc.
-      regexRestriction = new Regex(@"(?xi) ( first | third | camera )", RegexOptions.Compiled);
+      regexRestriction = new Regex(@"(?xi) ( first | third | camera | anyview )", RegexOptions.Compiled);
     }
 
     public void ApplyConfig(string config)
@@ -438,7 +439,7 @@ namespace KapitanOczywisty.HudLcd
         SetRange(false);
 
       var matches = regexRestriction.Matches(config);
-      if (matches.Count > 0)
+      if (matches.Count > 0 || HasRange)
       {
         RestrictionEnum NewRestrictions = RestrictionEnum.None;
         foreach (Match one in matches)
@@ -448,6 +449,7 @@ namespace KapitanOczywisty.HudLcd
             case "first": NewRestrictions |= RestrictionEnum.First; break;
             case "third": NewRestrictions |= RestrictionEnum.Third; break;
             case "camera": NewRestrictions |= RestrictionEnum.Camera; break;
+            case "anyview": NewRestrictions |= RestrictionEnum.Any; break;
           }
         }
         SetRestrictions(NewRestrictions);
