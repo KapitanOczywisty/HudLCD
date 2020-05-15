@@ -350,7 +350,7 @@ namespace KapitanOczywisty.HudLcd
 
     static HudSurface()
     {
-      regexPos = new Regex(@"(?xi) ( [\d.+-]+ )? \* ( [\d.+-]+ )? ", RegexOptions.Compiled | RegexOptions.RightToLeft);
+      regexPos = new Regex(@"(?xi) ( [\d.+-]+ ) [*x] ( [\d.+-]+ ) ", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexScale = new Regex(@"(?xi)  @ ( [\d.+-]+ ) ", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexColor = new Regex(@"(?xi)  \# ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} )", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexBackground = new Regex(@"(?xi) (?: background | \bbg\b ) (?: = ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} ) (?: ,(\d{1,3}) )? )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
