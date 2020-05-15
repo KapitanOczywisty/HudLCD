@@ -29,6 +29,14 @@ namespace KapitanOczywisty.HudLcd
     Any = 7,
   }
 
+  public enum RangeTypeEnum
+  {
+    Player = 0,
+    Faction = 1,
+    // disabled by default
+    All = 2,
+  }
+
   sealed class HudSurface
   {
     bool active = true;
@@ -73,6 +81,7 @@ namespace KapitanOczywisty.HudLcd
     int Range;
     bool NoHideHud;
     RestrictionEnum Restrictions = RestrictionEnum.None;
+    RangeTypeEnum RangeType = RangeTypeEnum.Player;
 
     bool needsUpdate = false;
 
@@ -123,12 +132,33 @@ namespace KapitanOczywisty.HudLcd
       || MyAPIGateway.Session.CameraController.Entity is IMyUserControllableGun;
     bool IsInDesiredRange()
     {
-      if (block.OwnerId == 0L) return false;
-      if (block.OwnerId == MyAPIGateway.Session.Player.IdentityId)
-        return PlayerDistance <= Range;
-      return false;
-      // for now only owner can see
-      // return block.GetPlayerRelationToOwner() == MyRelationsBetweenPlayerAndBlock.FactionShare && PlayerDistance <= Range;
+      switch (RangeType)
+      {
+        // // uncomment next 3 lines if you want "rangeall=100" working
+        // case RangeTypeEnum.All:
+        //   return PlayerDistance <= Range;
+        //   break;
+        case RangeTypeEnum.Faction:
+        case RangeTypeEnum.Player:
+          if (block.OwnerId == 0L) return false;
+          if (block.OwnerId == MyAPIGateway.Session.Player.IdentityId)
+            return PlayerDistance <= Range;
+
+          if (RangeType == RangeTypeEnum.Faction)
+          {
+            if (block.OwnerId != null && MyAPIGateway.Session.Player.IdentityId != null)
+            {
+              IMyFaction myFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.OwnerId);
+              IMyFaction myFaction2 = MyAPIGateway.Session.Factions.TryGetPlayerFaction(MyAPIGateway.Session.Player.IdentityId);
+
+              return myFaction != null && myFaction2 != null && myFaction == myFaction2 && PlayerDistance <= Range;
+            }
+            // return block.GetPlayerRelationToOwner() == MyRelationsBetweenPlayerAndBlock.FactionShare && PlayerDistance <= Range;
+          }
+          return false;
+        default:
+          return false;
+      }
     }
     bool IsOnFoot => ControlledEntity == null;
     bool IsSameGrid => ControlledEntity != null && ControlledEntity.CubeGrid == block.CubeGrid;
@@ -354,7 +384,7 @@ namespace KapitanOczywisty.HudLcd
       regexScale = new Regex(@"(?xi)  @ ( [\d.+-]+ ) ", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexColor = new Regex(@"(?xi)  \# ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} )", RegexOptions.Compiled | RegexOptions.RightToLeft);
       regexBackground = new Regex(@"(?xi) (?: background | \bbg\b ) (?: = ( [a-z]+ | \d{1,3},\d{1,3},\d{1,3} ) (?: ,(\d{1,3}) )? )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
-      regexRange = new Regex(@"(?xi) (?: range ) (?: = ( \d+ ) )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
+      regexRange = new Regex(@"(?xi) (?: range (all | faction | ) (?! \w ) ) (?: = ( \d+ ) )?", RegexOptions.Compiled | RegexOptions.RightToLeft);
       // someday we may support !first etc.
       regexRestriction = new Regex(@"(?xi) ( first | third | camera )", RegexOptions.Compiled);
     }
@@ -392,9 +422,17 @@ namespace KapitanOczywisty.HudLcd
 
       match = regexRange.Match(config);
       if (match.Success)
+      {
+        switch (match.Groups[1].Value)
+        {
+          case "all": RangeType = RangeTypeEnum.All; break;
+          case "faction": RangeType = RangeTypeEnum.Faction; break;
+          default: RangeType = RangeTypeEnum.Player; break;
+        }
         SetRange(
-          true, Utils.TryGetInt(match.Groups[1].Value, defaultRange)
+          true, Utils.TryGetInt(match.Groups[2].Value, defaultRange)
         );
+      }
       else
         SetRange(false);
 
