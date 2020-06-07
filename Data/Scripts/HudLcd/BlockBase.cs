@@ -39,7 +39,7 @@ namespace KapitanOczywisty.HudLcd
     // ungreedy modifier only with RightToLeft!
     static readonly Regex regexInstance = new Regex(@"(?xi)
       # keyword and display
-      " + HudKeyword + @" (\d+ (?![*.]) )?
+      " + HudKeyword + @" (\d+ (?![*.x]) )?
       # configuration
       ([\S\t ]*?)", RegexOptions.Compiled | RegexOptions.RightToLeft);
     static readonly Regex regexNoNewLine = new Regex(@"\\\r\n|\\\n|\\\r", RegexOptions.Compiled);
